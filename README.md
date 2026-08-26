@@ -337,7 +337,7 @@ python3 new_ground.py lead3      # 3-word thematic combinator
 
 | Tier | Candidates | Size | Where | Prior | Notes |
 |---|---|---|---|---|---|
-| A | `rockyou.txt` × `dive` | ~99 B | **GPU only** | low | The rule set `dive` was applied to the 108-word corpus but **never to rockyou**. The largest untested blind region. `SEARCH=gpu ./run_plan.sh A` |
+| A | `rockyou.txt` × `dive` | ~99 B | **GPU only** | low | The rule set `dive` was applied to the 108-word corpus but **never to rockyou**. The largest untested blind region. `python3 run_plan.py A --search gpu` |
 | B | `rockyou.txt` × `d3ad0ne` | ~34 B | **GPU only** | low | Same gap, different rule set. |
 | C | `xato-10M` / `Pwdb_top-10000000` × `best66` | tens of B | GPU | low | Deeper corpora than the 1 M lists floflo777 used. |
 | D | SecLists language-specific lists (his employer Synonym is Nordic) × `best64` | ~10 M | CPU ok | low–med | A corpus angle nobody has tried; cheap. |
@@ -346,9 +346,33 @@ These are ordered by cost, not by likelihood — every one is a *blind* sweep wi
 low prior, which is exactly why floflo777 stopped before them ("a further blind
 sweep has a low prior... the author frames the whole puzzle as a proof of concept").
 Run them only on a real GPU, and only if [lead 1 below](#open-leads) yields nothing.
-`run_plan.sh` wires each up; every tier pipes `hashcat -d 1 --stdout` (candidate
-generation only — hashcat cannot derive the address) into the search, resumable via
-`stats_*.txt`, stop on `HITS.txt`.
+
+`run_plan.py` wires each tier up and works on **Windows, macOS and Linux** (it sets
+up the hashcat→search pipe with `subprocess`, no shell needed). hashcat only
+*generates* candidates — it cannot derive the address, so our search does that.
+Machine-specific paths are passed by flag or environment variable:
+
+```bash
+# point it at your files (once), then pick tiers
+export KITTEN_HASHCAT=/path/to/hashcat            # or auto-detected from PATH
+export KITTEN_ROCKYOU=/path/to/rockyou.txt
+python3 run_plan.py A --search gpu                # tier A on the GPU
+python3 run_plan.py --dry-run A                   # print the commands, run nothing
+```
+
+```powershell
+# Windows PowerShell, GPU box:
+$env:KITTEN_HASHCAT="C:\tools\hashcat\hashcat.exe"
+$env:KITTEN_ROCKYOU="C:\wordlists\rockyou.txt"
+python run_plan.py A --search gpu
+```
+
+`--hashcat`, `--rules`, `--rockyou`, `--xato`, `--langdir` override the paths;
+the rules directory is auto-detected next to the hashcat binary. hashcat's device
+is left to hashcat on Windows/Linux and pinned to `-d 1` on macOS (Apple's OpenCL
+GPU cannot build hashcat's kernel); override with `--hashcat-device`. Runs are
+resumable via `stats_*.txt`; stop the instant `HITS.txt` appears. (`run_plan.sh`
+is the older bash-only version, macOS/Linux, kept for reference.)
 
 **The honest bottom line:** ~1.16 B human-plausible candidates plus the bounded
 thematic and alternate-path searches are now exhausted. If the passphrase is a
