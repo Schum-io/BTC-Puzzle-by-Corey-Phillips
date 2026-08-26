@@ -169,8 +169,7 @@ stats.txt
 # Everything below stays ignored:
 # - transient atomic-write temp files
 .run_plan_state.*.tmp
-# - per-run resume state for direct wordlist runs (local to each machine)
-stats_fast.txt
+# - per-run resume state for gpu_bruteforce.py direct wordlist runs (local)
 stats_gpu.txt
 # - a found passphrase / private key: NEVER push this to a repo
 HITS.txt

@@ -1,33 +1,43 @@
 #!/usr/bin/env python3
 """
-Fast CPU passphrase search -- the same job as `bruteforce.py`, ~1.5x quicker per
-core, streaming (so a 14 M-line wordlist needs no memory), resumable, and able to
-take candidates on stdin so hashcat's rule engine can drive it.
+CPU passphrase search: dictionary files/directories, or a stdin stream.
 
     python3 bruteforce_fast.py --selftest              # prove it can find a known answer
-    python3 bruteforce_fast.py wordlists/              # every *.txt in a directory
-    python3 bruteforce_fast.py rockyou.txt --mutate    # + case/leet/affix variants
-    hashcat --stdout -r best64.rule rockyou.txt | python3 bruteforce_fast.py --stdin
+    python3 bruteforce_fast.py wordlists/              # walk a directory for *.txt (recursively)
+    python3 bruteforce_fast.py a.txt b.txt             # specific files
+    python3 bruteforce_fast.py wordlists/ --mutate     # + case/leet/affix variants
+    python3 bruteforce_fast.py wordlists/ --status     # what is done / pending, run nothing
+    hashcat --stdout -r best66.rule rockyou.txt | python3 bruteforce_fast.py --stdin
 
-Reading candidates from stdin is the recommended way to use real rule sets: it
-gives you hashcat's entire rules ecosystem without reimplementing it here, and
-`--stdin` keeps up with anything a single `hashcat --stdout` process can emit.
+Given a directory it walks that directory AND all subdirectories for *.txt files
+and reads each line by line (over-long lines skipped). Each line is tested
+verbatim as the BIP39 passphrase on all three paths (BIP84/44/49) -- add
+casing/permutation variants as extra lines yourself, or pass --mutate for a small
+automatic case/leet/affix expansion.
 
-Resume: each finished input file is appended to `--state` (default
-`stats_fast.txt`) and skipped next run. A file interrupted halfway is NOT
-recorded, so it restarts from the top -- keep individual wordlists to a size you
-are willing to redo, or split them.
+`--stdin` reads candidates from a pipe -- the recommended way to use hashcat's
+rule engine for candidate generation (hashcat cannot derive the address; this does).
 
-Every hit is printed and appended to `--hits` (default `HITS.txt`), and is
-re-derived and re-checked against the full address string before being reported,
-so a reported hit is never a false positive.
+Resume is by file CONTENT HASH, not name: when a file is read to the end its
+SHA-256 goes into the state file (default wordlist_state.json); next run, any
+file that hashes to a recorded value is skipped -- so a dictionary is never
+re-read even if renamed or moved, and duplicate copies are processed once. A file
+interrupted midway is NOT recorded and is re-read in full, so a partial pass
+never counts as done. (stdin has no state.) State keys are content hashes, so the
+file is portable between machines.
+
+Every hit is printed, appended to `--hits` (default HITS.txt), and re-derived and
+re-checked against the full address before being reported -- never a false positive.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import sys
+import tempfile
 import time
 from itertools import islice
 from multiprocessing import Pool
@@ -36,6 +46,7 @@ from pathlib import Path
 import derive
 
 HERE = Path(__file__).resolve().parent
+MAX_LINE_BYTES = 256
 _TARGET: bytes = b""
 
 
@@ -43,8 +54,6 @@ _TARGET: bytes = b""
 # candidate sources
 # --------------------------------------------------------------------------- #
 
-# Deliberately small: anything more elaborate belongs in a hashcat rule file
-# piped in through --stdin, not hard-coded here.
 _LEET = str.maketrans({"a": "4", "e": "3", "i": "1", "o": "0", "s": "5", "t": "7"})
 _AFFIX = ("", "1", "123", "!", "2019", "01", "?")
 
@@ -59,9 +68,13 @@ def mutations(word: str):
 
 
 def read_lines(path: Path):
-    with path.open("r", encoding="utf-8", errors="ignore") as fh:
-        for line in fh:
-            yield line.rstrip("\r\n")
+    """Text lines of a file, tolerant of non-UTF-8 bytes (rockyou has a few);
+    over-long lines dropped (a passphrase is not a megabyte blob)."""
+    with path.open("rb") as fh:
+        for raw in fh:
+            if len(raw) > MAX_LINE_BYTES + 2:
+                continue
+            yield raw.decode("utf-8", "surrogateescape").rstrip("\r\n")
 
 
 def _stdin_lines():
@@ -93,6 +106,8 @@ def chunks(iterable, size: int):
 
 
 def collect_sources(paths: list[Path]) -> list[Path]:
+    """Every file to read: a directory expands to all *.txt under it, recursively;
+    a plain file is taken as-is (any extension)."""
     out: list[Path] = []
     for p in paths:
         if p.is_dir():
@@ -102,6 +117,41 @@ def collect_sources(paths: list[Path]) -> list[Path]:
         else:
             sys.exit(f"{p}: no such file or directory")
     return out
+
+
+def file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for block in iter(lambda: fh.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+# --------------------------------------------------------------------------- #
+# state (keyed by file content hash, so names/paths/machines don't matter)
+# --------------------------------------------------------------------------- #
+
+
+def load_state(path: Path) -> dict:
+    if path.exists():
+        try:
+            d = json.loads(path.read_text(encoding="utf-8"))
+            d.setdefault("done", {})
+            return d
+        except (json.JSONDecodeError, OSError):
+            print(f"warning: {path.name} unreadable, starting fresh", file=sys.stderr)
+    return {"version": 1, "done": {}}
+
+
+def save_state(state: dict, path: Path) -> None:
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".wordlist_state.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(state, fh, indent=1)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
 
 # --------------------------------------------------------------------------- #
@@ -175,14 +225,15 @@ def selftest(jobs: int, batch: int) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("sources", nargs="*", type=Path, help="wordlist files, or directories of *.txt")
+    ap.add_argument("sources", nargs="*", type=Path, help="files, or directories walked recursively")
     ap.add_argument("--stdin", action="store_true", help="read candidates from stdin, one per line")
-    ap.add_argument("--mutate", action="store_true", help="expand each word with case/leet/affix variants")
+    ap.add_argument("--mutate", action="store_true", help="expand each line with case/leet/affix variants")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     ap.add_argument("--batch", type=int, default=20_000, help="candidates per worker task")
     ap.add_argument("--hits", type=Path, default=HERE / "HITS.txt")
-    ap.add_argument("--state", type=Path, default=HERE / "stats_fast.txt")
-    ap.add_argument("--no-resume", action="store_true")
+    ap.add_argument("--state", type=Path, default=HERE / "wordlist_state.json")
+    ap.add_argument("--no-resume", action="store_true", help="ignore state, re-read every file")
+    ap.add_argument("--status", action="store_true", help="print done/pending files, run nothing")
     ap.add_argument("--target", default=derive.TARGET_ADDRESS,
                     help="override the target address (for positive-control runs)")
     ap.add_argument("--selftest", action="store_true")
@@ -191,21 +242,27 @@ def main() -> int:
     if args.selftest:
         return selftest(args.jobs, args.batch)
     if not args.sources and not args.stdin:
-        ap.error("give at least one wordlist, a directory, or --stdin")
+        ap.error("give at least one file, a directory, or --stdin")
 
     try:
         target = derive.decode_p2wpkh(args.target)
     except ValueError as exc:
         sys.exit(f"--target {args.target}: {exc}")
 
-    print(f"target   : {args.target}  (hash160 {target.hex()})")
-    print(f"mnemonic : {derive.MNEMONIC}")
-    print(f"path     : m/84'/0'/0'/0/0")
-    print(f"workers  : {args.jobs}   batch: {args.batch:,}   mutate: {args.mutate}")
+    # --- status view: no derivation, just what the state file says ---
+    if args.status:
+        if args.stdin or not args.sources:
+            ap.error("--status needs file/directory sources")
+        state = load_state(args.state)
+        done = set(state["done"])
+        for f in collect_sources(args.sources):
+            mark, note = ("x", "done") if file_sha256(f) in done else (" ", "pending")
+            print(f"  [{mark}] {f}  ({note})")
+        return 0
 
-    done_files: set[str] = set()
-    if args.state.exists() and not args.no_resume:
-        done_files = {ln.strip() for ln in args.state.read_text(encoding="utf-8").splitlines() if ln.strip()}
+    print(f"target   : {args.target}  (hash160 {target.hex()})")
+    print(f"path     : m/84'/0'/0'/0/0   (checked on bip84/44/49)")
+    print(f"workers  : {args.jobs}   batch: {args.batch:,}   mutate: {args.mutate}")
 
     found: list[str] = []
     with Pool(args.jobs, initializer=_init, initargs=(target,)) as pool:
@@ -214,16 +271,29 @@ def main() -> int:
             found = run(expand(_stdin_lines(), args.mutate),
                         pool, args.batch, "stdin", args.hits, args.target)
         else:
+            state = {"version": 1, "done": {}} if args.no_resume else load_state(args.state)
+            done_hashes = set(state["done"])
             files = collect_sources(args.sources)
-            todo = [f for f in files if str(f) not in done_files]
-            print(f"source   : {len(files)} file(s), {len(files) - len(todo)} already done\n")
-            for path in todo:
+            skipped_done = 0
+            print(f"source   : {len(files)} *.txt file(s) under {', '.join(map(str, args.sources))}\n")
+            for path in files:
+                digest = file_sha256(path)
+                if digest in done_hashes:
+                    skipped_done += 1
+                    continue
                 found = run(expand(read_lines(path), args.mutate),
                             pool, args.batch, str(path), args.hits, args.target)
                 if found:
                     break
-                with args.state.open("a", encoding="utf-8") as fh:
-                    fh.write(str(path) + "\n")
+                # only reached if the whole file was read with no hit. The hash is
+                # the key (it decides skipping); the path is stored only for human
+                # convenience and never affects the run.
+                state["done"][digest] = str(path)
+                save_state(state, args.state)
+                done_hashes.add(digest)
+            if not found:
+                print(f"\nskipped {skipped_done} already-done; "
+                      f"{len(state['done'])} files recorded in {args.state.name}")
 
     if found:
         print(f"\nSolved. Sweep {args.target} immediately -- see the README on fee/broadcast.")
