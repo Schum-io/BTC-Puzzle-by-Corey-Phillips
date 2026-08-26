@@ -1,2 +1,12 @@
+# main.py, bruteforce.py, mnemonic_variants.py -- the readable reference path.
+# Needs Python <= 3.13: coincurve has no wheel that builds on 3.14 yet.
 bip_utils==2.9.3
 numerize==0.12
+
+# derive.py, bruteforce_fast.py -- the fast path (bip_utils pulls this in too,
+# but the fast path uses it directly and does not need bip_utils at all).
+coincurve
+
+# gpu/ only. Skip these if you are not running the OpenCL search.
+pyopencl>=2023.1
+numpy>=1.24

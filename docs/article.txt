@@ -1,0 +1,181 @@
+ 
+ Part 1/3: Turn Your Photos Into Bitcoin Private Keys/Addresses | by Corey Phillips | Medium Sitemap 
+ Open in app Sign up 
+ Sign in 
+ Medium Logo 
+ Write
+ Search 
+ Sign up 
+ Sign in 
+ Top highlight 
+ Part 1/3: Turn Your Photos Into Bitcoin Private Keys/Addresses
+ Disclaimer: The methods discussed in this article are not recommended for short or long term storage of your Bitcoin. This is only for fun. Anything you do with this knowledge or the provided library is at your own risk. As long as you understand that, let’s begin.
+ Corey Phillips 
+ Follow 
+ 3 min read · 
+ Jul 9, 2019 
+ 80 
+ 21 
+ Listen
+ Share
+ Press enter or click to view image in full size 
+ Source: https://twitter.com/aantonop/status/603701870482300928 
+ Brief history:
+ Back in May of 2015 Andreas Antonopoulos posted the above picture that utilized steganography to embed a signed transaction into the image. This idea of concealing and easily decoding arbitrary data in other data intrigued me. So I started thinking, how can we play with this idea? Can we use the file to store our Bitcoin private key? Heck, why not use the file itself as our seed for generating a mnemonic phrase? With this, I coded up a quick proof-of-concept here and uploaded a simple demo here. 
+ Our goal:
+ Take the image from Andreas’ tweet and turn it into the following Bitcoin address, “ bc1q57euh23y3qs2f9d5mtwpax5lqecfvrdkqce82a ”.
+ Why would we do this?
+ Turning an image into a Bitcoin address effectively allows us to turn any seemingly arbitrary file into an inconspicuous, mobile unit of wealth. Now, instead of writing down a series of 12–24 words to recover and access funds all we need to do is carry around a photo on a thumb or hard drive. We can even add a passphrase to prevent malicious actors from gaining access to our funds if they somehow attempt to brute-force our photo library.
+ The Process In A Nutshell:
+ /*
+Bitimage Pseudocode
+*/ //We'll need the following libraries
+const Bitcoin = require('bitcoinjs-lib');
+const bip39 = require('bip39');
+const bip32 = require('bip32'); //Grab the kitten photo
+kittenphoto.jpg; //Get Data URI of kittenphoto.jpg
+Data URI: data:[<media type>][;base64],<data>; //Hash the base64 data of the kitten photo
+const hash = Bitcoin.crypto.sha256(<data>); //Use the hash to create a mnemonic phrase
+const mnemonic = bip39.entropyToMnemonic(hash); //Add a passphrase (Optional, but recommended)
+const passphrase = "" //Use the mnemonic and passphrase to generate the seed
+const seed = bip39.mnemonicToSeed(mnemonic, passphrase); //Use the seed to generate a bech32 address
+const root = bip32.fromSeed(seed, network);
+const keyPair = root.derivePath(`m/84'/0'/0'/0/0`);
+const address = Bitcoin.payments.p2wpkh({pubkey: keyPair.publicKey}).address; //Result
+address === "bc1q57euh23y3qs2f9d5mtwpax5lqecfvrdkqce82a"; 
+ Every file can be broken down, defined and represented as a Base64 string . Bitimage extracts the Base64 string from the data URI of any file that you feed it and uses that string to generate a mnemonic phrase.
+ Get Corey Phillips’s stories in your inbox
+ Join Medium for free to get updates from this writer.
+ Subscribe 
+ Subscribe 
+ The Base64 string for the kitten image is rather long so I’ve shortened it for presentation purposes here, “/9j/4AAQSkZJRg …. +MbzXZF3n/2Q==”. Since the Base64 string is rather unwieldy we hash it using the sha256 hash function leaving us with the following, “1808d35318ac7cb98b69ff9779b699d6a631f15e0b353ac89b7c4020774832ed”.
+ We then pass this hash off to bip39’s “ entropyToMnemonic ” function to generate our mnemonic phrase. With the mnemonic phrase in hand we can generate our seed with or without a passphrase. Including a passphrase will prevent any random person with access to the file from accessing our funds, assuming the passphrase is sufficient and cannot be easily brute-forced.
+ Using this seed we can now generate our keyPair and corresponding addresses/private keys for the uploaded file using the bitcoinjs-lib library. As expected, we are left with the following Bitcoin address, “ bc1q57euh23y3qs2f9d5mtwpax5lqecfvrdkqce82a ”.
+ Fun & Games:
+ The mnemonic for the kitten photo without a passphrase contains roughly 0.00095133 BTC. Feel free to claim it if you manage to sweep the keys in time.
+ To prove the viability of this method, I have also sent 0.01 BTC to the following address, “bc1qcyrndzgy036f6ax370g8zyvlw86ulawgt0246r”. This address was generated using the kitten image along with a BIP39 passphrase. Remember, this is not meant to be solved. It is meant to prove the viability of this method, but if you somehow manage to claim it, congrats!
+ Bitimage Demo Site:
+ Again, feel free to take a look at the demo site here or run it locally on your computer by cloning the repo on Github here .
+ bitimage
+ coreyphillips.github.io
+ In Part 2 we will discuss how to use the methods discussed here to timestamp our documents and prove their existence at a certain point in time without utilizing any centralized third party.
+ Have any questions? Feel free to reach out:
+ Github: https://github.com/coreyphillips 
+ Twitter: @ coreylphillips 
+ Bitcoin
+ Blockchain
+ Blockchain Technology
+ Bitcoin News
+ Cryptocurrency
+ 80 
+ 80 
+ 21 
+ Follow 
+ Written by Corey Phillips 
+ 56 followers 
+ · 38 following 
+ Follow 
+ Responses (21)
+ Write a response
+ What are your thoughts?
+ Cancel 
+ Respond 
+ Schum
+ Apr 15, 2024 
+ Where to look for the passphrase, do i need to use steganography to find the key in the image, or is it just a random word (words) that are hidden in the text and need to be understood?
+ 15
+ Reply 
+ FILIPE4OLIVEIRA
+ Jun 7, 2024 
+ I was able to reproduce your code in Python, but when placing to generate the BTC wallet without password ends up generating the "bc1qasptyrp0xyjxzz95q9cr32y2pdptqlwekgww9x" (equal to your site https://coreyphillips.github.io) and not the wallet… more 
+ 6
+ 1 reply
+ Reply 
+ MoE
+ Jan 21, 2025 
+ I've been working on the puzzle and thoroughly enjoying the challenge! However, I've encountered an issue regarding the wallet address derivation.
+ I generated the following mnemonics from the associated picture:
+ Mnemonics:
+ elite usual surround kiwi… more 
+ 41
+ 1 reply
+ Reply 
+ See all responses 
+ More from Corey Phillips
+ Corey Phillips
+ Part 2/3: How To Timestamp & Prove A Document Existed At A Certain Point In Time
+ In Part 1 we discussed how to turn any file into a mnemonic phrase that allows us to yield as many Bitcoin private key/address pairs as we…
+ Mar 20, 2021 
+ A clap icon 53 
+ A response icon 1 
+ Corey Phillips
+ Bitbip: A New, Open-Source, Non-Custodial Bitcoin Wallet
+ iOS: https://testflight.apple.com/join/yTLqj9Xn
+Android: https://play.google.com/store/apps/details?id=com.kisswallet
+Github…
+ Mar 25, 2019 
+ A clap icon 8 
+ Corey Phillips
+ A Bitcoin Audio Puzzle
+ Happy New Year! It’s been a while since my last puzzle so for 2020 I thought I would have some fun and make another Bitcoin audio puzzle.
+ Jan 5, 2020 
+ A clap icon 53 
+ See all from Corey Phillips
+ Recommended from Medium
+ In
+ Write A Catalyst
+ by
+ Dr. Patricia Schmidt
+ As a Neuroscientist, I Quit These 5 Morning Habits That Destroy Your Brain
+ Most people do #1 within 10 minutes of waking (and it sabotages your entire day)
+ Jan 15 
+ A clap icon 31K 
+ A response icon 560 
+ In
+ Generative AI
+ by
+ Adham Khaled
+ Stanford Just Killed Prompt Engineering With 8 Words (And I Can’t Believe It Worked)
+ ChatGPT keeps giving you the same boring response? This new technique unlocks 2× more creativity from ANY AI model — no training required…
+ Oct 20, 2025 
+ A clap icon 24K 
+ A response icon 632 
+ Jonatha Czajkiewicz
+ What a Sex Worker Notices About Gen X and Gen Z Men
+ How masculinity changed between Grunge and TikTok
+ Nov 16, 2025 
+ A clap icon 20K 
+ A response icon 519 
+ In
+ Level Up Coding
+ by
+ Teja Kusireddy
+ I Stopped Using ChatGPT for 30 Days. What Happened to My Brain Was Terrifying.
+ 91% of you will abandon 2026 resolutions by January 10th. Here’s how to be in the 9% who actually win.
+ Dec 29, 2025 
+ A clap icon 6.9K 
+ A response icon 276 
+ Will Lockett
+ The AI Bubble Is About To Burst, But The Next Bubble Is Already Growing
+ Techbros are preparing their latest bandwagon.
+ Sep 15, 2025 
+ A clap icon 22K 
+ A response icon 966 
+ Michal Malewicz
+ The End of Dashboards and Design Systems
+ Design is becoming quietly human again.
+ Nov 26, 2025 
+ A clap icon 5.7K 
+ A response icon 220 
+ See more recommendations
+ Help
+ Status
+ About
+ Careers
+ Press
+ Blog
+ Privacy
+ Rules
+ Terms
+ Text to speech
+ 
