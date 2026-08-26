@@ -110,15 +110,24 @@ def chunks(iterable, size: int):
         yield block
 
 
-def collect_sources(paths: list[Path]) -> list[Path]:
-    """Every file to read: a directory expands to all *.txt under it, recursively;
-    a plain file is taken as-is (any extension)."""
-    out: list[Path] = []
+def collect_sources(paths: list[Path]) -> list[tuple[Path, str]]:
+    """Every file to read, as (absolute path, display path).
+
+    The display path is relative and rooted at the NAME of the directory you
+    pointed at -- e.g. pointing at `.../SecLists` records
+    `SecLists/Usernames/Names/x.txt`, not the machine-specific absolute path. It
+    uses POSIX separators so the recorded name is identical on Windows and macOS.
+    The display path is stored in the state file for convenience only; skipping is
+    decided by the file's content hash, never by this string.
+    """
+    out: list[tuple[Path, str]] = []
     for p in paths:
         if p.is_dir():
-            out.extend(sorted(p.rglob("*.txt")))
+            root = p
+            for f in sorted(p.rglob("*.txt")):
+                out.append((f, f"{root.name}/{f.relative_to(root).as_posix()}"))
         elif p.exists():
-            out.append(p)
+            out.append((p, p.name))
         else:
             sys.exit(f"{p}: no such file or directory")
     return out
@@ -226,18 +235,18 @@ def drive(args, check) -> list[str]:
     files = collect_sources(args.sources)
     skipped_done = 0
     print(f"source   : {len(files)} *.txt file(s) under {', '.join(map(str, args.sources))}\n")
-    for path in files:
+    for path, display in files:
         digest = file_sha256(path)
         if digest in done_hashes:
             skipped_done += 1
             continue
-        found = check(expand(read_lines(path), args.mutate), str(path))
+        found = check(expand(read_lines(path), args.mutate), display)
         if found:
             return found
         # only reached if the whole file was read with no hit. The hash is the
-        # key (it decides skipping); the path is stored only for human convenience
-        # and never affects the run.
-        state["done"][digest] = str(path)
+        # key (it decides skipping); the relative display path is stored only for
+        # human convenience and never affects the run.
+        state["done"][digest] = display
         save_state(state, args.state)
         done_hashes.add(digest)
     print(f"\nskipped {skipped_done} already-done; "
@@ -296,9 +305,9 @@ def main() -> int:
             ap.error("--status needs file/directory sources")
         state = load_state(args.state)
         done = set(state["done"])
-        for f in collect_sources(args.sources):
+        for f, display in collect_sources(args.sources):
             mark, note = ("x", "done") if file_sha256(f) in done else (" ", "pending")
-            print(f"  [{mark}] {f}  ({note})")
+            print(f"  [{mark}] {display}  ({note})")
         return 0
 
     print(f"target   : {args.target}  (hash160 {target.hex()})")
