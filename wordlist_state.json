@@ -20,7 +20,7 @@
   "eda2e397b583ff97cc02a3f3394c7a38f5f3dbb1a75aaae782dd39692ddfe147": "Books/greatest_books_of_all_time_lowercase.txt",
   "25ad7ed58ab7edcf3da2fa0bcf74f529903586cbc2b5514fa414594aa5f91338": "Books/greatest_books_of_all_time_original.txt",
   "d5dc89805cd60a98d22dd1b7bf7cab7a826cfe16525e6e0db80309603d3e4a48": "Books/greatest_books_of_all_time_uppercase.txt",
-  "e2527d92a9cccfcf8b5b831a71ce106826652b4b66ade56cc82db6f2db5ff69d": "Books/greatest_books_of_all_time_with_leet_variations.txt"
+  "e2527d92a9cccfcf8b5b831a71ce106826652b4b66ade56cc82db6f2db5ff69d": "Books/greatest_books_of_all_time_with_leet_variations.txt",
   "75643b349f5d127ecb0475913ef932355979255f53f3b99c7fb338db71775f66": "SecLists/Usernames/CommonAdminBase64.txt",
   "17e51f418eff95664ea674f6b16369811d277292460fef26d53d1fa3d7dea246": "SecLists/Usernames/Honeypot-Captures/multiplesources-users-fabian-fingerle.de.txt",
   "2229934682aa837216c3bb46173e49f867b7298f89142ea106794f7e37a9343e": "SecLists/Usernames/Names/familynames-usa-top1000.txt",
@@ -34,7 +34,7 @@
   "52ade80576bb08e6270f0943352c70fa4aadaa9c4b5af325806e2de888a3b6c7": "SecLists/Usernames/sap-default-usernames.txt",
   "dc44775d12dcdb4027017623ffaa935a018944839ce4b204ccb0c6ef566db5dd": "SecLists/Usernames/top-usernames-shortlist.txt",
   "255980398021dab1aa83b4aa85b29d897736c6367db9322026427ddc1608897f": "SecLists/Usernames/xato-net-10-million-usernames-dup.txt",
-  "19b5af05756996c82c1e77f17406e85a6dccb08be55d5ea31d09c050dcbb1da5": "SecLists/Usernames/xato-net-10-million-usernames.txt"
+  "19b5af05756996c82c1e77f17406e85a6dccb08be55d5ea31d09c050dcbb1da5": "SecLists/Usernames/xato-net-10-million-usernames.txt",
   "e2527d92a9cccfcf8b5b831a71ce106826652b4b66ade56cc82db6f2db5ff69d": "Books/greatest_books_of_all_time_with_leet_variations.txt",
   "48d466a24db50c22972b41ba5dc10d6c3183f0b354cb579bf13ba7ca6d1332af": "WiFi-WPA/probable-v2-wpa-top447.txt",
   "c946d5ab5470761dbb87607f39b465701ca68c2cc9392cb67005a0681687af0e": "WiFi-WPA/probable-v2-wpa-top4800.txt",
@@ -44,6 +44,9 @@
   "0066590f0df47dfc6bacc543580545c3addc9bc371d498b27eaebb8e84870a18": "Wikipedia/wikipedia_es_vowels_no_compounds_top-1000000.txt",
   "4db229cb3b3791a902f0139c5600f0e1d664b16dbf3dfba23cc22e37fb99a064": "Wikipedia/wikipedia_fr_vowels_no_compounds_top-1000000.txt",
   "30d4cbff31b852fa937487fbd0766db4a3fae1162693467fdac6ca666e39a6d3": "Wikipedia/wikipedia_pt_vowels_no_compounds_top-1000000.txt",
-  "e375b9294d37e35f98f489e409b5ab375e3d9a87f4ec8ea18993d77701882835": "Wikipedia/wikipedia_tr_vowels_no_compounds_top-1000000.txt"
+  "e375b9294d37e35f98f489e409b5ab375e3d9a87f4ec8ea18993d77701882835": "Wikipedia/wikipedia_tr_vowels_no_compounds_top-1000000.txt",
+  "309a19938c103bfd5dae2e49eb2c53acf7ff74f29ac9130833b00d9a58e366bd": "SCRABBLE/Merriam-Webster-SCRABBLE-4thEdition.txt",
+  "bff558f753927e3923bc377cf9012c8f5dbe667baa3515bc63464dffe7693970": "SCRABBLE/SCRABBLE-large.txt",
+  "288d8e9ee2f7c1a6b88b91506fbcb53949fc0aaf30609a58890595f572f54055": "SCRABBLE/SCRABBLE-munged-large.txt"
  }
 }
