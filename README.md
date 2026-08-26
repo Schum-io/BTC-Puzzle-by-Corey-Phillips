@@ -51,7 +51,7 @@ small automatic case/leet/affix expansion.
 python3 bruteforce_fast.py --selftest              # positive control (must find a planted secret)
 python3 bruteforce_fast.py /path/to/SecLists       # walk the tree for *.txt, resume automatically
 python3 bruteforce_fast.py /path/to/SecLists --gpu # same, on the GPU (OpenCL) instead of the CPU pool
-python3 bruteforce_fast.py wordlists/ --status     # what is done / pending, run nothing
+python3 bruteforce_fast.py /path/to/SecLists --status # what is done / pending, run nothing
 python3 bruteforce_fast.py a.txt b.txt --mutate    # specific files + variants
 ```
 
@@ -164,7 +164,6 @@ nothing — run it once per machine before trusting results.
 | `run_plan.py` | hashcat-driven rule sweeps, chunked resume, cross-machine state |
 | `gpu/` | OpenCL kernel + host + benchmarks |
 | `kitten.jpeg` | the puzzle image (its base64's sha256 is the BIP39 entropy) |
-| `wordlists/` | small bundled dictionaries |
 | `run_plan_state.json`, `wordlist_state.json` | resume state (committed, portable) |
 | `HITS.txt` | any found passphrase (git-ignored) |
 

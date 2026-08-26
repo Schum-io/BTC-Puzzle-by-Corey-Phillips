@@ -157,9 +157,10 @@ passphrases. That is why this repo carries its own OpenCL kernel.
   plus the mnemonic's own sha256.
 * [HomelessPhD/CorePhylips_CATS](https://github.com/HomelessPhD/CorePhylips_CATS) — ~1/3 of `rockyou.txt`
   plus phrases from the article and repo. Author: *"I have not found any clues or hints."*
-* The bundled `wordlists/` (skullsecurity lists, ~709 K lines) in 4 case variants each. **Note:** despite an
-  old claim that all skullsecurity lists were tried, full `rockyou.txt` was only covered by floflo777, not
-  by the bundled-list runs.
+* skullsecurity lists (~709 K lines: `cain`, `english`, `john`, `500-worst`, `conficker`, `twitter-banned`)
+  in 4 case variants each — these were bundled in an earlier version of the repo and have since been removed.
+  **Note:** despite an old claim that all skullsecurity lists were tried, full `rockyou.txt` was only covered
+  by floflo777, not by those runs.
 
 ---
 
