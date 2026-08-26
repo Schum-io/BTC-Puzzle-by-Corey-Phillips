@@ -277,12 +277,84 @@ the ~709 K lines above. Running rockyou properly is the cheapest untried step (~
 
 Also completed with no match:
 
+* **~1.16 billion candidates** by floflo777 (rockyou raw + best64, the 108-word Corey corpus × 8 rule sets,
+  human lists, 2-word combinator, quotes, the decoded audio message, alternate index paths) — see
+  [the search plan](#the-search-plan) for the full breakdown.
+* `new_ground.py lead2` — 421,973 candidates (every bundled wordlist + thematic vocab) on BIP44/BIP49/BIP84.
+* `new_ground.py lead3` — 329,003 three-word thematic combinations on all three paths.
 * `mnemonic_variants.py` — permutations/subsets/reversals/joins of the 24 kitten mnemonic words (up to
   4 words, `--deep` up to 5), plus the mnemonic's own sha256.
 * [HomelessPhD/CorePhylips_CATS](https://github.com/HomelessPhD/CorePhylips_CATS) — ~1/3 of `rockyou.txt`
   plus phrases composed from the article and the bitimage repo. The author states: *"I have not found any
   clues or hints."*
 * The two targeted runs described in [Ruled out by measurement](#ruled-out-by-measurement).
+
+# The search plan
+
+**Read this before spending any compute.** An independent researcher (floflo777's
+[open-crypto-puzzles](https://github.com/floflo777/open-crypto-puzzles), folder
+`2-mid-prizes/corey-phillips-kitten-passphrase-1msats/`) has already tested
+**~1.16 billion candidates against this exact target, 0 matches**, with a planted
+positive control recovered in each run. Their ledger covers:
+
+* `rockyou.txt` raw (14.3 M) **and** `rockyou.txt` × `best64` (1.10 B)
+* a 108-word Corey-specific corpus (mined from his Medium/GitHub/employer) × 8 rule
+  sets — `best64`, `leetspeak`, `T0XlC`, `toggles3`, `rockyou-30000`,
+  `OneRuleToRuleThemAll`, `d3ad0ne`, `dive` (23.7 M)
+* human lists `probable-v2-top12000`, `darkweb2017-top10k`, `xato-top-1M`,
+  `ncsc-100k`, raw + `best64` (9.0 M)
+* a 2-word thematic combinator, in-joke taglines, famous quotes + the full BIP39
+  list as a single word, and the decoded audio-puzzle message + 32 variants
+* alternate BIP84 index paths on the corpus, and a `btcrecover` cross-check
+
+So **do not re-run rockyou or the standard rule sets** — that ground is covered.
+What is left is (a) the two bounded searches their ledger lists as *not yet run*,
+(b) big blind rule sweeps they deliberately skipped, and (c) asking the author.
+
+## Already done here — `new_ground.py` (floflo777's leads 2 & 3)
+
+Both completed, 0 matches, each with a positive control planted on a non-default
+path first:
+
+```bash
+python3 new_ground.py --selftest
+python3 new_ground.py lead2      # BIP44/49 safety net
+python3 new_ground.py lead3      # 3-word thematic combinator
+```
+
+* **Lead 2 — BIP44/BIP49 safety net.** Every bundled wordlist *and* the thematic
+  vocabulary (421,973 candidates) checked against `m/44'`, `m/49'` and `m/84'` at
+  once — the target is matched as a hash160, so the base58/bech32 encoding a real
+  BIP44/49 wallet would show is irrelevant. This is broader than floflo777's lead 2
+  (they proposed only the 108-word corpus). **0 matches** → the passphrase is not a
+  bundled-list word under an alternate purpose.
+* **Lead 3 — 3-word thematic combinator.** All 3-word permutations of the 39-word
+  puzzle vocabulary × 6 join styles (none/space/underscore/dash/camelCase/PascalCase),
+  on all 3 paths (329,003 candidates). floflo777 tested only 1- and 2-word forms.
+  **0 matches.**
+
+## What is left, and what to run
+
+| Tier | Candidates | Size | Where | Prior | Notes |
+|---|---|---|---|---|---|
+| A | `rockyou.txt` × `dive` | ~99 B | **GPU only** | low | The rule set `dive` was applied to the 108-word corpus but **never to rockyou**. The largest untested blind region. `SEARCH=gpu ./run_plan.sh A` |
+| B | `rockyou.txt` × `d3ad0ne` | ~34 B | **GPU only** | low | Same gap, different rule set. |
+| C | `xato-10M` / `Pwdb_top-10000000` × `best66` | tens of B | GPU | low | Deeper corpora than the 1 M lists floflo777 used. |
+| D | SecLists language-specific lists (his employer Synonym is Nordic) × `best64` | ~10 M | CPU ok | low–med | A corpus angle nobody has tried; cheap. |
+
+These are ordered by cost, not by likelihood — every one is a *blind* sweep with a
+low prior, which is exactly why floflo777 stopped before them ("a further blind
+sweep has a low prior... the author frames the whole puzzle as a proof of concept").
+Run them only on a real GPU, and only if [lead 1 below](#open-leads) yields nothing.
+`run_plan.sh` wires each up; every tier pipes `hashcat -d 1 --stdout` (candidate
+generation only — hashcat cannot derive the address) into the search, resumable via
+`stats_*.txt`, stop on `HITS.txt`.
+
+**The honest bottom line:** ~1.16 B human-plausible candidates plus the bounded
+thematic and alternate-path searches are now exhausted. If the passphrase is a
+human-chosen word or short phrase, tiers A–D still have a chance; if it is a
+password-manager-random string — which the author's "not meant to be solved" framing
+allows — no feasible search finds it, and lead 1 is the only path.
 
 # Open leads
 

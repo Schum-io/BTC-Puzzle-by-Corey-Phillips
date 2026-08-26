@@ -104,7 +104,12 @@ class Searcher:
         self.found: list[str] = []
 
     def _run_batch(self, cands: list[str]) -> None:
-        encoded = [unicodedata.normalize("NFKD", c).encode() for c in cands]
+        # NFKD is a no-op on ASCII, and essentially every candidate a wordlist or
+        # a hashcat mask produces is ASCII. Skipping the call there keeps this
+        # host loop from becoming the bottleneck on a fast device -- at 10^5
+        # candidates/s the per-candidate Python work is no longer free.
+        encoded = [c.encode() if c.isascii() else derive._passphrase_bytes(c)
+                   for c in cands]
 
         # Long candidates are rare; check them here rather than sizing every
         # device buffer for the worst case.
@@ -185,6 +190,12 @@ class Searcher:
 # --------------------------------------------------------------------------- #
 # candidate sources (kept identical in behaviour to bruteforce_fast.py)
 # --------------------------------------------------------------------------- #
+
+
+def _stdin_lines():
+    """Candidates from stdin, tolerant of non-UTF-8 bytes (see bruteforce_fast.py)."""
+    for raw in sys.stdin.buffer:
+        yield raw.decode("utf-8", "surrogateescape").rstrip("\r\n")
 
 
 def read_lines(path: Path):
@@ -300,7 +311,7 @@ def main() -> int:
 
     if args.stdin:
         print("source   : stdin\n")
-        searcher.run((ln.rstrip("\r\n") for ln in sys.stdin), "stdin", args.hits)
+        searcher.run(_stdin_lines(), "stdin", args.hits)
     else:
         files = collect_sources(args.sources)
         todo = [f for f in files if str(f) not in done_files]

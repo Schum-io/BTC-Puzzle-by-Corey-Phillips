@@ -61,6 +61,16 @@ EMPTY_PASSPHRASE_ADDRESS = "bc1q57euh23y3qs2f9d5mtwpax5lqecfvrdkqce82a"
 
 PATH = (84, 0, 0, 0, 0)  # m/84'/0'/0'/0/0, first three hardened
 
+# Safety-net paths (floflo777's lead 2): the puzzle specifies BIP84, but a
+# candidate might land on the target hash160 via another common purpose. The
+# TARGET is compared as a hash160, so the base58/bech32 encoding a real BIP44/49
+# wallet would show is irrelevant here -- only the derived pubkey matters.
+PATHS = {
+    "bip84": (84, 0, 0, 0, 0),
+    "bip44": (44, 0, 0, 0, 0),
+    "bip49": (49, 0, 0, 0, 0),
+}
+
 # --------------------------------------------------------------------------- #
 # bech32 (BIP173) -- only witness v0 / 20-byte programs are needed here
 # --------------------------------------------------------------------------- #
@@ -152,8 +162,24 @@ def _ckd_normal(key: int, chain: bytes, index: int) -> tuple[int, bytes]:
     return (int.from_bytes(I[:32], "big") + key) % CURVE_N, I[32:]
 
 
+def _passphrase_bytes(passphrase: str) -> bytes:
+    """BIP39 salt bytes for a passphrase: NFKD then UTF-8.
+
+    Candidates piped in from a wordlist can contain bytes that are not valid
+    UTF-8 (rockyou has a handful). Those arrive here as surrogateescape code
+    points; NFKD would raise on them, so we detect that case and round-trip the
+    original bytes instead. This tests such a candidate as its exact byte
+    sequence rather than dropping it -- and never crashes the whole run over one
+    malformed line.
+    """
+    try:
+        return unicodedata.normalize("NFKD", passphrase).encode("utf-8")
+    except (UnicodeEncodeError, ValueError):
+        return passphrase.encode("utf-8", "surrogateescape")
+
+
 def seed_from_passphrase(passphrase: str) -> bytes:
-    salt = b"mnemonic" + unicodedata.normalize("NFKD", passphrase).encode()
+    salt = b"mnemonic" + _passphrase_bytes(passphrase)
     return hashlib.pbkdf2_hmac("sha512", MNEMONIC_NFKD, salt, 2048, 64)
 
 
@@ -172,6 +198,23 @@ def hash160_from_passphrase(passphrase: str, path: tuple = PATH) -> bytes:
 
 def address_from_passphrase(passphrase: str, path: tuple = PATH) -> str:
     return encode_p2wpkh(hash160_from_passphrase(passphrase, path))
+
+
+def hash160_on_paths(passphrase: str, paths) -> dict:
+    """{path_name: hash160} for several derivation paths, computing the seed once."""
+    I = hmac.new(b"Bitcoin seed", seed_from_passphrase(passphrase), hashlib.sha512).digest()
+    key0, chain0 = int.from_bytes(I[:32], "big"), I[32:]
+    out = {}
+    for name, path in paths.items():
+        key, chain = key0, chain0
+        purpose, coin, account, change, index = path
+        for i in (purpose, coin, account):
+            key, chain = _ckd_hardened(key, chain, i)
+        for i in (change, index):
+            key, chain = _ckd_normal(key, chain, i)
+        pub = PublicKey.from_valid_secret(key.to_bytes(32, "big")).format()
+        out[name] = hashlib.new("ripemd160", hashlib.sha256(pub).digest()).digest()
+    return out
 
 
 # --------------------------------------------------------------------------- #

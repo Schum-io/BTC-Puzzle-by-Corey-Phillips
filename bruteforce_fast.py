@@ -64,6 +64,17 @@ def read_lines(path: Path):
             yield line.rstrip("\r\n")
 
 
+def _stdin_lines():
+    """Candidates from stdin, tolerant of non-UTF-8 bytes (rockyou has a few).
+
+    Reading the raw buffer with surrogateescape means one malformed line is
+    tested as its exact bytes instead of killing the pipe -- which is what a
+    plain text-mode `for ln in sys.stdin` does partway through a 14 M-line feed.
+    """
+    for raw in sys.stdin.buffer:
+        yield raw.decode("utf-8", "surrogateescape").rstrip("\r\n")
+
+
 def expand(lines, mutate: bool):
     if not mutate:
         yield from lines
@@ -200,7 +211,7 @@ def main() -> int:
     with Pool(args.jobs, initializer=_init, initargs=(target,)) as pool:
         if args.stdin:
             print("source   : stdin\n")
-            found = run(expand((ln.rstrip("\r\n") for ln in sys.stdin), args.mutate),
+            found = run(expand(_stdin_lines(), args.mutate),
                         pool, args.batch, "stdin", args.hits, args.target)
         else:
             files = collect_sources(args.sources)
