@@ -522,9 +522,16 @@ case/leet/affix expansion, or add your own variants as extra lines.
 ```bash
 python3 bruteforce_fast.py --selftest          # positive control
 python3 bruteforce_fast.py wordlists/          # walk the tree for *.txt, resume automatically
+python3 bruteforce_fast.py wordlists/ --gpu    # same, on the GPU (OpenCL) instead of the CPU pool
 python3 bruteforce_fast.py wordlists/ --status # what is done / pending, run nothing
 python3 bruteforce_fast.py a.txt b.txt --mutate
 ```
+
+`--gpu` routes the same candidate stream (directory walk + hash resume, or stdin)
+through the OpenCL kernel in `gpu/` instead of the CPU pool — it needs pyopencl +
+numpy and an OpenCL GPU, and reuses the one host implementation in
+`gpu/gpu_bruteforce.py` so there is a single kernel to keep correct. Every GPU hit
+is re-derived on the CPU before it counts.
 
 **Resume is by file content hash, not name** (`wordlist_state.json`): when a file
 is read to the end its SHA-256 is recorded; next run, any file that hashes to a

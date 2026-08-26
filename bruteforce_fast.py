@@ -7,7 +7,12 @@ CPU passphrase search: dictionary files/directories, or a stdin stream.
     python3 bruteforce_fast.py a.txt b.txt             # specific files
     python3 bruteforce_fast.py wordlists/ --mutate     # + case/leet/affix variants
     python3 bruteforce_fast.py wordlists/ --status     # what is done / pending, run nothing
-    hashcat --stdout -r best66.rule rockyou.txt | python3 bruteforce_fast.py --stdin
+    python3 bruteforce_fast.py wordlists/ --gpu        # run the search on the GPU (OpenCL)
+    hashcat --stdout -r best66.rule rockyou.txt | python3 bruteforce_fast.py --stdin --gpu
+
+`--gpu` runs the same candidate stream (directory walk with hash-based resume, or
+stdin) through the OpenCL kernel in gpu/ instead of the CPU pool; it needs pyopencl
++ numpy and an OpenCL GPU. Every GPU hit is re-derived on the CPU before it counts.
 
 Given a directory it walks that directory AND all subdirectories for *.txt files
 and reads each line by line (over-long lines skipped). Each line is tested
@@ -207,6 +212,39 @@ def run(candidates, pool, batch: int, label: str, hits_path: Path, target_addres
     return found
 
 
+def drive(args, check) -> list[str]:
+    """Shared driver for both backends: either the stdin stream, or the *.txt
+    files under the sources with hash-based resume. `check(candidates, label)`
+    runs one candidate stream and returns the passphrases found (empty if none).
+    """
+    if args.stdin:
+        print("source   : stdin\n")
+        return check(expand(_stdin_lines(), args.mutate), "stdin")
+
+    state = {"version": 1, "done": {}} if args.no_resume else load_state(args.state)
+    done_hashes = set(state["done"])
+    files = collect_sources(args.sources)
+    skipped_done = 0
+    print(f"source   : {len(files)} *.txt file(s) under {', '.join(map(str, args.sources))}\n")
+    for path in files:
+        digest = file_sha256(path)
+        if digest in done_hashes:
+            skipped_done += 1
+            continue
+        found = check(expand(read_lines(path), args.mutate), str(path))
+        if found:
+            return found
+        # only reached if the whole file was read with no hit. The hash is the
+        # key (it decides skipping); the path is stored only for human convenience
+        # and never affects the run.
+        state["done"][digest] = str(path)
+        save_state(state, args.state)
+        done_hashes.add(digest)
+    print(f"\nskipped {skipped_done} already-done; "
+          f"{len(state['done'])} files recorded in {args.state.name}")
+    return []
+
+
 def selftest(jobs: int, batch: int) -> int:
     """Positive control: hide a known passphrase in a stream and make sure it is found."""
     secret = "kitten-positive-control-42"
@@ -227,9 +265,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sources", nargs="*", type=Path, help="files, or directories walked recursively")
     ap.add_argument("--stdin", action="store_true", help="read candidates from stdin, one per line")
+    ap.add_argument("--gpu", action="store_true",
+                    help="run the search on the GPU (OpenCL) instead of the CPU pool")
     ap.add_argument("--mutate", action="store_true", help="expand each line with case/leet/affix variants")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
-    ap.add_argument("--batch", type=int, default=20_000, help="candidates per worker task")
+    ap.add_argument("--batch", type=int, default=20_000, help="CPU: candidates per worker task")
+    ap.add_argument("--gpu-batch", type=int, default=262_144, help="GPU: candidates per dispatch")
     ap.add_argument("--hits", type=Path, default=HERE / "HITS.txt")
     ap.add_argument("--state", type=Path, default=HERE / "wordlist_state.json")
     ap.add_argument("--no-resume", action="store_true", help="ignore state, re-read every file")
@@ -262,38 +303,27 @@ def main() -> int:
 
     print(f"target   : {args.target}  (hash160 {target.hex()})")
     print(f"path     : m/84'/0'/0'/0/0   (checked on bip84/44/49)")
-    print(f"workers  : {args.jobs}   batch: {args.batch:,}   mutate: {args.mutate}")
 
-    found: list[str] = []
-    with Pool(args.jobs, initializer=_init, initargs=(target,)) as pool:
-        if args.stdin:
-            print("source   : stdin\n")
-            found = run(expand(_stdin_lines(), args.mutate),
-                        pool, args.batch, "stdin", args.hits, args.target)
-        else:
-            state = {"version": 1, "done": {}} if args.no_resume else load_state(args.state)
-            done_hashes = set(state["done"])
-            files = collect_sources(args.sources)
-            skipped_done = 0
-            print(f"source   : {len(files)} *.txt file(s) under {', '.join(map(str, args.sources))}\n")
-            for path in files:
-                digest = file_sha256(path)
-                if digest in done_hashes:
-                    skipped_done += 1
-                    continue
-                found = run(expand(read_lines(path), args.mutate),
-                            pool, args.batch, str(path), args.hits, args.target)
-                if found:
-                    break
-                # only reached if the whole file was read with no hit. The hash is
-                # the key (it decides skipping); the path is stored only for human
-                # convenience and never affects the run.
-                state["done"][digest] = str(path)
-                save_state(state, args.state)
-                done_hashes.add(digest)
-            if not found:
-                print(f"\nskipped {skipped_done} already-done; "
-                      f"{len(state['done'])} files recorded in {args.state.name}")
+    if args.gpu:
+        # The GPU host code lives in gpu/gpu_bruteforce.py; reuse its Searcher so
+        # there is exactly one OpenCL implementation to keep correct.
+        sys.path.insert(0, str(HERE / "gpu"))
+        try:
+            from gpu_bruteforce import Searcher
+        except Exception as exc:  # noqa: BLE001 -- surface any import/OpenCL setup failure plainly
+            sys.exit(f"--gpu: could not load the GPU backend ({exc}). "
+                     "Needs pyopencl + numpy and an OpenCL GPU; run "
+                     "`python gpu/gpu_bruteforce.py --selftest` to diagnose.")
+        print(f"backend  : GPU   gpu-batch: {args.gpu_batch:,}   mutate: {args.mutate}")
+        searcher = Searcher(args.target, args.gpu_batch)
+        found = drive(args, lambda cands, label: searcher.run(cands, label, args.hits))
+        if searcher.diverted:
+            print(f"note: {searcher.diverted:,} over-length candidate(s) were checked on the CPU")
+    else:
+        print(f"backend  : CPU   workers: {args.jobs}   batch: {args.batch:,}   mutate: {args.mutate}")
+        with Pool(args.jobs, initializer=_init, initargs=(target,)) as pool:
+            found = drive(args, lambda cands, label: run(cands, pool, args.batch, label,
+                                                         args.hits, args.target))
 
     if found:
         print(f"\nSolved. Sweep {args.target} immediately -- see the README on fee/broadcast.")

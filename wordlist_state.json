@@ -1,0 +1,8 @@
+{
+ "version": 1,
+ "done": {
+  "63c8449e5d43d7ae7e6eaaec19b3bcff86ff150189e22d9f849e9ba5000205bb": "wordlists/500-worst-passwords.txt",
+  "aea55b80df089a5148f4161ec1b6f26ab453e2be12494836c0805797246e7334": "wordlists/conficker.txt",
+  "dd1cfc2a57dfc78bceedf6e60de82efb65739db18b084c4f0ad02105ee0c60ac": "wordlists/twitter-banned.txt"
+ }
+}
