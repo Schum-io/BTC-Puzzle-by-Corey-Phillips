@@ -16,6 +16,10 @@
   "a70720275f2dec0d25f4ad4fcc800022386a658efeaf062a93fcdf600ec8d147": "SecLists/Usernames/mssql-usernames-nansh0u-guardicore.txt",
   "52ade80576bb08e6270f0943352c70fa4aadaa9c4b5af325806e2de888a3b6c7": "SecLists/Usernames/sap-default-usernames.txt",
   "dc44775d12dcdb4027017623ffaa935a018944839ce4b204ccb0c6ef566db5dd": "SecLists/Usernames/top-usernames-shortlist.txt",
-  "255980398021dab1aa83b4aa85b29d897736c6367db9322026427ddc1608897f": "SecLists/Usernames/xato-net-10-million-usernames-dup.txt"
+  "255980398021dab1aa83b4aa85b29d897736c6367db9322026427ddc1608897f": "SecLists/Usernames/xato-net-10-million-usernames-dup.txt",
+  "eda2e397b583ff97cc02a3f3394c7a38f5f3dbb1a75aaae782dd39692ddfe147": "Books/greatest_books_of_all_time_lowercase.txt",
+  "25ad7ed58ab7edcf3da2fa0bcf74f529903586cbc2b5514fa414594aa5f91338": "Books/greatest_books_of_all_time_original.txt",
+  "d5dc89805cd60a98d22dd1b7bf7cab7a826cfe16525e6e0db80309603d3e4a48": "Books/greatest_books_of_all_time_uppercase.txt",
+  "e2527d92a9cccfcf8b5b831a71ce106826652b4b66ade56cc82db6f2db5ff69d": "Books/greatest_books_of_all_time_with_leet_variations.txt"
  }
 }
