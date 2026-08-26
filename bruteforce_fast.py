@@ -157,7 +157,21 @@ def load_state(path: Path) -> dict:
     return {"version": 1, "done": {}}
 
 
+def _read_done(path: Path) -> dict:
+    """Best-effort read of the on-disk 'done' map; empty on missing/corrupt file."""
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("done", {})
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
 def save_state(state: dict, path: Path) -> None:
+    """Merge with whatever is on disk before writing, so a second process (or a
+    run over a different set of sources) can never wipe out hashes recorded by
+    another writer -- the file only ever grows."""
+    state["done"] = {**_read_done(path), **state["done"]}
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".wordlist_state.", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -248,7 +262,7 @@ def drive(args, check) -> list[str]:
         # human convenience and never affects the run.
         state["done"][digest] = display
         save_state(state, args.state)
-        done_hashes.add(digest)
+        done_hashes = set(state["done"])
     print(f"\nskipped {skipped_done} already-done; "
           f"{len(state['done'])} files recorded in {args.state.name}")
     return []
