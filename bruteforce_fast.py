@@ -167,6 +167,23 @@ def _read_done(path: Path) -> dict:
         return {}
 
 
+def _replace_with_retry(tmp: str, path: Path, attempts: int = 8, delay: float = 0.05) -> None:
+    """os.replace() can transiently fail on Windows (WinError 5, PermissionError)
+    when another process -- antivirus, an editor's file watcher, a cloud-sync
+    client -- briefly has the target open without FILE_SHARE_DELETE. Frequent
+    saves (brute-forcing many small wordlists means one save per file) raise
+    the odds of colliding with one of these; retry with backoff instead of
+    crashing the run over a momentary lock."""
+    for attempt in range(attempts):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay * (attempt + 1))
+
+
 def save_state(state: dict, path: Path) -> None:
     """Merge with whatever is on disk before writing, so a second process (or a
     run over a different set of sources) can never wipe out hashes recorded by
@@ -176,7 +193,7 @@ def save_state(state: dict, path: Path) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(state, fh, indent=1)
-        os.replace(tmp, path)
+        _replace_with_retry(tmp, path)
     finally:
         if os.path.exists(tmp):
             os.remove(tmp)
