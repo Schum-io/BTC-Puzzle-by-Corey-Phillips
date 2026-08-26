@@ -162,3 +162,15 @@ stats.txt
 *.iml
 *.xml
 .DS_Store
+
+# run_plan_state.json is TRACKED on purpose: the cross-machine resume ledger
+# (one machine continues where another stopped). Its unit keys use the
+# wordlist's basename + keyspace, not absolute paths, so they are portable.
+# Everything below stays ignored:
+# - transient atomic-write temp files
+.run_plan_state.*.tmp
+# - per-run resume state for direct wordlist runs (local to each machine)
+stats_fast.txt
+stats_gpu.txt
+# - a found passphrase / private key: NEVER push this to a repo
+HITS.txt

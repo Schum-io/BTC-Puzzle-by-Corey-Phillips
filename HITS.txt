@@ -1,2 +1,0 @@
-bip49  'safety-net-control-99'
-bip49  'safety-net-control-99'

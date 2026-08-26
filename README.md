@@ -370,9 +370,40 @@ python run_plan.py A --search gpu
 `--hashcat`, `--rules`, `--rockyou`, `--xato`, `--langdir` override the paths;
 the rules directory is auto-detected next to the hashcat binary. hashcat's device
 is left to hashcat on Windows/Linux and pinned to `-d 1` on macOS (Apple's OpenCL
-GPU cannot build hashcat's kernel); override with `--hashcat-device`. Runs are
-resumable via `stats_*.txt`; stop the instant `HITS.txt` appears. (`run_plan.sh`
-is the older bash-only version, macOS/Linux, kept for reference.)
+GPU cannot build hashcat's kernel); override with `--hashcat-device`.
+
+**Resume (`run_plan_state.json`).** A tier is split into *units*: each wordlist is
+chunked into ranges of `--chunk-words` base words (default 2,000,000) via hashcat's
+`--skip`/`--limit`. That chunking is exact — the union of the chunks is byte-for-byte
+the whole keyspace (verified against a full run) — so nothing is skipped or
+double-counted. Every unit that **completes** is written to `run_plan_state.json` and
+skipped next time; a unit interrupted midway (Ctrl-C, crash, power cut) is **not**
+recorded and re-runs in full, because a half-processed chunk would be a false "no
+match". So you can stop and restart tier A across days and it picks up where it left
+off. Keep `--chunk-words` to a size you're willing to redo.
+
+```bash
+python3 run_plan.py A --search gpu     # runs only the not-yet-done chunks
+python3 run_plan.py A --status         # list every unit, [x] done / [ ] pending
+python3 run_plan.py A --no-resume      # ignore state, redo the whole tier
+python3 run_plan.py A --dry-run        # print the per-chunk commands, run nothing
+```
+
+Changing a wordlist's *content* (so its keyspace changes) invalidates that file's
+old units automatically — they re-run rather than being wrongly skipped.
+
+**`run_plan_state.json` is committed to git on purpose** so one machine continues
+where another stopped: commit it, push, `git pull` on the other box, and it skips
+whatever the first already finished. The unit keys use the tier's *role*
+(`rockyou`/`xato`) and the wordlist keyspace — not the file path or name — so a
+Windows GPU box and a Mac share progress even if rockyou lives in different places
+and the venvs differ. (`HITS.txt`, in contrast, is git-ignored: it would hold the
+found passphrase/key, which must never be pushed.) Stop the instant `HITS.txt`
+appears.
+
+(`run_plan.sh` is the older bash-only version without resume, macOS/Linux, kept for
+reference; and note hashcat 7.x ships `best66`/`dive`/`d3ad0ne` rules — there is no
+`best64.rule`, so tier D uses `best66`.)
 
 **The honest bottom line:** ~1.16 B human-plausible candidates plus the bounded
 thematic and alternate-path searches are now exhausted. If the passphrase is a
