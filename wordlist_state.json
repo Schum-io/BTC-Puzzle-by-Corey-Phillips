@@ -432,6 +432,20 @@
   "45c039943f0e11adef40317c96343a208086efb35b46c81f95c1f558b879dbc9": "Passwords/Software/cain-and-abel.txt",
   "78624dbef85caaf1a085715f08284e58fc556d87ead9d1b98313b6ca2c083692": "Passwords/Software/john-the-ripper.txt",
   "e72f7c89831f6bbdc06859618b30572917fd2809bd17a63834b7876669fdbd04": "Passwords/stupid-ones-in-production.txt",
-  "d7a90099c867ac2ab80cceb3c7dad4667233293ef53471aecb5c74a52d936a6f": "Passwords/unkown-azul.txt"
+  "d7a90099c867ac2ab80cceb3c7dad4667233293ef53471aecb5c74a52d936a6f": "Passwords/unkown-azul.txt",
+  "558a26a88880e5ee40cb0d70f6d38c3bb86adaa3a7766f9b3939460abac5d8df": "Usernames/cirt-default-usernames.txt",
+  "64e619569b7074e8037187e44fa80dbc23166acf07e64b779d91aedf761edca0": "Usernames/CommonAdminBase64.txt",
+  "7b3c57124bbb212226c8ef632d0ebe38dc6afed88193d053d1e362b886876fbb": "Usernames/Honeypot-Captures/multiplesources-users-fabian-fingerle.de.txt",
+  "7ec2b1bf684234ecf545b09e801f70070016dd4574112913e606e41b5c11c225": "Usernames/mssql-usernames-nansh0u-guardicore.txt",
+  "fc52bfed52f0703427532c08d1cf0254cf130d4159fb1dd1732c33f4955e76fd": "Usernames/Names/familynames-usa-top1000.txt",
+  "0fc76ca3e655077569eea177669a379e967fee74ab044f1bd45043d7ae60cec6": "Usernames/Names/femalenames-usa-top1000.txt",
+  "c586c35c775c8d1a33745a129b71e0003d1c1305e085a9c99137c49a50a9acfb": "Usernames/Names/forenames-india-top1000.txt",
+  "041040563df230d68eb615b7505e25639ecb157c20e0ce718d2f977bdfa74532": "Usernames/Names/malenames-usa-top1000.txt",
+  "24fd36ffa28e4f82cc921dbb781c8da26da3f7af966b6316da2efec1d6ebbaeb": "Usernames/Names/names-brazil-top100000.txt",
+  "a1b3d7bdfd0c697fafa7b08adc67dc5b9728309cc82f7471271c5b9fb4a3b90c": "Usernames/Names/names.txt",
+  "595a3844d47211b8a522efef239b97a0bdd28a909daa4e330f5547c217dd13e0": "Usernames/sap-default-usernames.txt",
+  "ab8f83754e32a8f1f4e7bf84f3abaa470e0afa1ebb1c119a8ee92ec529425c19": "Usernames/top-usernames-shortlist.txt",
+  "312e0b4831531620cd4498b90849c0b62a3528823efe6a706fdcd6a9abb4e659": "Usernames/xato-net-10-million-usernames-dup.txt",
+  "d79f27fe691497d6f7bc5e3ec19f2d9489de3459cec0bda9dd5a4d6092a597e7": "Usernames/xato-net-10-million-usernames.txt"
  }
 }
